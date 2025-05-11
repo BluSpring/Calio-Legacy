@@ -1,13 +1,12 @@
 package io.github.apace100.calio;
 
 import io.github.apace100.calio.mixin.WeightedListEntryAccessor;
-import net.minecraft.util.collection.WeightedList;
-
 import java.util.Random;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import net.minecraft.world.entity.ai.behavior.ShufflingList;
 
-public class FilterableWeightedList<U> extends WeightedList<U> {
+public class FilterableWeightedList<U> extends ShufflingList<U> {
 
     private Predicate<U> filter;
 
@@ -37,17 +36,17 @@ public class FilterableWeightedList<U> extends WeightedList<U> {
 
     public Stream<U> stream() {
         if(filter != null) {
-            return this.entries.stream().map(WeightedList.Entry::getElement).filter(filter);
+            return this.entries.stream().map(ShufflingList.WeightedEntry::getData).filter(filter);
         }
         return super.stream();
     }
 
-    public Stream<Entry<U>> entryStream() {
-        return this.entries.stream().filter(entry -> filter == null || filter.test(entry.getElement()));
+    public Stream<WeightedEntry<U>> entryStream() {
+        return this.entries.stream().filter(entry -> filter == null || filter.test(entry.getData()));
     }
 
     public void addAll(FilterableWeightedList<U> other) {
-        other.entryStream().forEach(entry -> add(entry.getElement(), ((WeightedListEntryAccessor)entry).getWeight()));
+        other.entryStream().forEach(entry -> add(entry.getData(), ((WeightedListEntryAccessor)entry).getWeight()));
     }
 
     public U pickRandom(Random random) {

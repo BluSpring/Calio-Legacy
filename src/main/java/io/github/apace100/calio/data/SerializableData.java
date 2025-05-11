@@ -3,14 +3,13 @@ package io.github.apace100.calio.data;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
-
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 public class SerializableData {
 
@@ -37,7 +36,7 @@ public class SerializableData {
         return this;
     }
 
-    public void write(PacketByteBuf buffer, Instance instance) {
+    public void write(FriendlyByteBuf buffer, Instance instance) {
         dataFields.forEach((name, field) -> {
             try {
                 boolean isPresent = instance.get(name) != null;
@@ -55,7 +54,7 @@ public class SerializableData {
         });
     }
 
-    public Instance read(PacketByteBuf buffer) {
+    public Instance read(FriendlyByteBuf buffer) {
         Instance instance = new Instance();
         dataFields.forEach((name, field) -> {
             try {
@@ -169,12 +168,12 @@ public class SerializableData {
             return (String)get(name);
         }
 
-        public Identifier getId(String name) {
-            return (Identifier)get(name);
+        public ResourceLocation getId(String name) {
+            return (ResourceLocation)get(name);
         }
 
-        public EntityAttributeModifier getModifier(String name) {
-            return (EntityAttributeModifier)get(name);
+        public AttributeModifier getModifier(String name) {
+            return (AttributeModifier)get(name);
         }
     }
 

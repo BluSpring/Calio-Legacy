@@ -1,11 +1,10 @@
 package io.github.apace100.calio.mixin;
 
 import io.github.apace100.calio.registry.DataObjectRegistry;
-import net.minecraft.network.ClientConnection;
+import net.minecraft.network.Connection;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.integrated.IntegratedServer;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -13,14 +12,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(PlayerManager.class)
+@Mixin(PlayerList.class)
 public class RegistrySyncMixin {
 
 
     @Shadow @Final private MinecraftServer server;
 
-    @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;onSpawn()V"), method = "Lnet/minecraft/server/PlayerManager;onPlayerConnect(Lnet/minecraft/network/ClientConnection;Lnet/minecraft/server/network/ServerPlayerEntity;)V")
-    private void autoSyncDataObjectRegistries(ClientConnection connection, ServerPlayerEntity player, CallbackInfo info) {
+    @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerPlayer;initInventoryMenu()V"), method = "placeNewPlayer")
+    private void autoSyncDataObjectRegistries(Connection connection, ServerPlayer player, CallbackInfo info) {
         DataObjectRegistry.performAutoSync(player);
     }
 }

@@ -4,25 +4,25 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.SinglePreparationResourceReloader;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.util.profiler.Profiler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.util.profiling.ProfilerFiller;
 
 /***
  * Like JsonDataLoader, but provides a list of elements with an identifier, each element being loaded by a different
  * data pack. This allows overriding and merging several data files into one, similar to how tags work. There is no
  * guarantee on the order of the resulting list, so make sure to include some kind of "priority" system.
  */
-public abstract class MultiJsonDataLoader extends SinglePreparationResourceReloader<Map<Identifier, List<JsonElement>>> {
+public abstract class MultiJsonDataLoader extends SimplePreparableReloadListener<Map<ResourceLocation, List<JsonElement>>> {
     private static final Logger LOGGER = LogManager.getLogger();
     private static final int FILE_SUFFIX_LENGTH = ".json".length();
     private final Gson gson;
@@ -33,33 +33,33 @@ public abstract class MultiJsonDataLoader extends SinglePreparationResourceReloa
         this.dataType = dataType;
     }
 
-    protected Map<Identifier, List<JsonElement>> prepare(ResourceManager resourceManager, Profiler profiler) {
-        Map<Identifier, List<JsonElement>> map = Maps.newHashMap();
+    protected Map<ResourceLocation, List<JsonElement>> prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
+        Map<ResourceLocation, List<JsonElement>> map = Maps.newHashMap();
         int i = this.dataType.length() + 1;
-        Iterator<Map.Entry<Identifier, Resource>> var5 = resourceManager.findResources(this.dataType, (id) -> {
+        Iterator<Map.Entry<ResourceLocation, Resource>> var5 = resourceManager.listResources(this.dataType, (id) -> {
             return id.getPath().endsWith(".json");
         }).entrySet().iterator();
         Set<String> resourcesHandled = new HashSet<>();
         while(var5.hasNext()) {
-            Identifier identifier = var5.next().getKey();
+            ResourceLocation identifier = var5.next().getKey();
             String string = identifier.getPath();
-            Identifier identifier2 = new Identifier(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
+            ResourceLocation identifier2 = new ResourceLocation(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
             resourcesHandled.clear();
-            resourceManager.getAllResources(identifier).forEach(resource -> {
-                if(!resourcesHandled.contains(resource.getResourcePackName())) {
-                    resourcesHandled.add(resource.getResourcePackName());
+            resourceManager.getResourceStack(identifier).forEach(resource -> {
+                if(!resourcesHandled.contains(resource.sourcePackId())) {
+                    resourcesHandled.add(resource.sourcePackId());
                     try {
                         Throwable var10 = null;
                         try {
-                            InputStream inputStream = resource.getInputStream();
+                            InputStream inputStream = resource.open();
                             Throwable var12 = null;
 
                             try {
-                                Reader reader = resource.getReader();
+                                Reader reader = resource.openAsReader();
                                 Throwable var14 = null;
 
                                 try {
-                                    JsonElement jsonElement = (JsonElement) JsonHelper.deserialize(this.gson, (Reader)reader, (Class)JsonElement.class);
+                                    JsonElement jsonElement = (JsonElement) GsonHelper.fromJson(this.gson, (Reader)reader, (Class)JsonElement.class);
                                     if (jsonElement != null) {
                                         if(map.containsKey(identifier2)) {
                                             map.get(identifier2).add(jsonElement);

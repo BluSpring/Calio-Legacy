@@ -6,10 +6,10 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
 @Environment(EnvType.CLIENT)
 public class CalioNetworkingClient {
@@ -24,13 +24,13 @@ public class CalioNetworkingClient {
     }
 
     private static void onDataObjectRegistrySync(
-        MinecraftClient minecraftClient,
-        ClientPlayNetworkHandler clientPlayNetworkHandler,
-        PacketByteBuf packetByteBuf,
+        Minecraft minecraftClient,
+        ClientPacketListener clientPlayNetworkHandler,
+        FriendlyByteBuf packetByteBuf,
         PacketSender packetSender) {
-        Identifier registryId = packetByteBuf.readIdentifier();
+        ResourceLocation registryId = packetByteBuf.readResourceLocation();
         DataObjectRegistry.getRegistry(registryId).receive(packetByteBuf,
-            minecraftClient.isIntegratedServerRunning() ? r -> {} : minecraftClient::execute);
+            minecraftClient.hasSingleplayerServer() ? r -> {} : minecraftClient::execute);
         /*minecraftClient.execute(() -> {
             DataObjectRegistry.getRegistry(registryId).receive(packetByteBuf);
         });*/

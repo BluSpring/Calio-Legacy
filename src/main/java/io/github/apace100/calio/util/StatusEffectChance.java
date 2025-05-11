@@ -1,9 +1,9 @@
 package io.github.apace100.calio.util;
 
-import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.world.effect.MobEffectInstance;
 
 public class StatusEffectChance {
 
-    public StatusEffectInstance statusEffectInstance;
+    public MobEffectInstance statusEffectInstance;
     public float chance;
 }

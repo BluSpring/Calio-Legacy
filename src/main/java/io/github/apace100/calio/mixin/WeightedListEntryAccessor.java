@@ -1,10 +1,10 @@
 package io.github.apace100.calio.mixin;
 
-import net.minecraft.util.collection.WeightedList;
+import net.minecraft.world.entity.ai.behavior.ShufflingList;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(WeightedList.Entry.class)
+@Mixin(ShufflingList.WeightedEntry.class)
 public interface WeightedListEntryAccessor {
 
     @Accessor

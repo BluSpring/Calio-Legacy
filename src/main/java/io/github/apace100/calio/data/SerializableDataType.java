@@ -10,29 +10,28 @@ import io.github.apace100.calio.FilterableWeightedList;
 import io.github.apace100.calio.mixin.WeightedListEntryAccessor;
 import io.github.apace100.calio.util.ArgumentWrapper;
 import io.github.apace100.calio.util.TagLike;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import net.minecraft.core.Registry;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.GsonHelper;
 
 public class SerializableDataType<T> {
 
     private final Class<T> dataClass;
-    private final BiConsumer<PacketByteBuf, T> send;
-    private final Function<PacketByteBuf, T> receive;
+    private final BiConsumer<FriendlyByteBuf, T> send;
+    private final Function<FriendlyByteBuf, T> receive;
     private final Function<JsonElement, T> read;
 
     public SerializableDataType(Class<T> dataClass,
-                                BiConsumer<PacketByteBuf, T> send,
-                                Function<PacketByteBuf, T> receive,
+                                BiConsumer<FriendlyByteBuf, T> send,
+                                Function<FriendlyByteBuf, T> receive,
                                 Function<JsonElement, T> read) {
         this.dataClass = dataClass;
         this.send = send;
@@ -40,11 +39,11 @@ public class SerializableDataType<T> {
         this.read = read;
     }
 
-    public void send(PacketByteBuf buffer, Object value) {
+    public void send(FriendlyByteBuf buffer, Object value) {
         send.accept(buffer, cast(value));
     }
 
-    public T receive(PacketByteBuf buffer) {
+    public T receive(FriendlyByteBuf buffer) {
         return receive.apply(buffer);
     }
 
@@ -110,7 +109,7 @@ public class SerializableDataType<T> {
             AtomicInteger i = new AtomicInteger();
             list.entryStream().forEach(entry -> {
                 try {
-                    singleDataType.send(buf, entry.getElement());
+                    singleDataType.send(buf, entry.getData());
                     buf.writeInt(((WeightedListEntryAccessor) entry).getWeight());
                 } catch(DataException e) {
                     throw e.prepend("[" + i.get() + "]");
@@ -142,7 +141,7 @@ public class SerializableDataType<T> {
                     try {
                         JsonObject weightedObj = je.getAsJsonObject();
                         T elem = singleDataType.read(weightedObj.get("element"));
-                        int weight = JsonHelper.getInt(weightedObj, "weight");
+                        int weight = GsonHelper.getAsInt(weightedObj, "weight");
                         list.add(elem, weight);
                     } catch(DataException e) {
                         throw e.prepend("[" + i + "]");
@@ -157,13 +156,13 @@ public class SerializableDataType<T> {
     }
 
     public static <T> SerializableDataType<T> registry(Class<T> dataClass, Registry<T> registry) {
-        return wrap(dataClass, SerializableDataTypes.IDENTIFIER, registry::getId, id -> {
-            Optional<T> optional = registry.getOrEmpty(id);
+        return wrap(dataClass, SerializableDataTypes.IDENTIFIER, registry::getKey, id -> {
+            Optional<T> optional = registry.getOptional(id);
             if(optional.isPresent()) {
                 return optional.get();
             } else {
                 throw new RuntimeException(
-                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.getKey().getValue() + "\".");
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().location() + "\".");
             }
         });
     }
@@ -227,8 +226,8 @@ public class SerializableDataType<T> {
 
     public static <T> SerializableDataType<T> mapped(Class<T> dataClass, BiMap<String, T> map) {
         return new SerializableDataType<>(dataClass,
-            (buf, t) -> buf.writeString(map.inverse().get(t)),
-            (buf) -> map.get(buf.readString(32767)),
+            (buf, t) -> buf.writeUtf(map.inverse().get(t)),
+            (buf) -> map.get(buf.readUtf(32767)),
             (json) -> {
                 if(json.isJsonPrimitive()) {
                     JsonPrimitive primitive = json.getAsJsonPrimitive();
@@ -256,17 +255,17 @@ public class SerializableDataType<T> {
             (json) -> fromFunction.apply(base.read(json)));
     }
 
-    public static <T> SerializableDataType<TagKey<T>> tag(RegistryKey<? extends Registry<T>> registryKey) {
+    public static <T> SerializableDataType<TagKey<T>> tag(ResourceKey<? extends Registry<T>> registryKey) {
         return SerializableDataType.wrap(ClassUtil.castClass(TagKey.class), SerializableDataTypes.IDENTIFIER,
-            TagKey::id,
-            id -> TagKey.of(registryKey, id));
+            TagKey::location,
+            id -> TagKey.create(registryKey, id));
     }
 
-    public static <T> SerializableDataType<RegistryKey<T>> registryKey(RegistryKey<Registry<T>> registryKeyRegistry) {
+    public static <T> SerializableDataType<ResourceKey<T>> registryKey(ResourceKey<Registry<T>> registryKeyRegistry) {
         return SerializableDataType.wrap(
-            ClassUtil.castClass(RegistryKey.class),
+            ClassUtil.castClass(ResourceKey.class),
             SerializableDataTypes.IDENTIFIER,
-            RegistryKey::getValue, identifier -> RegistryKey.of(registryKeyRegistry, identifier)
+            ResourceKey::location, identifier -> ResourceKey.create(registryKeyRegistry, identifier)
         );
     }
 
@@ -335,10 +334,10 @@ public class SerializableDataType<T> {
                     jsonArray.forEach(je -> {
                         String s = je.getAsString();
                         if (s.startsWith("#")) {
-                            Identifier id = new Identifier(s.substring(1));
+                            ResourceLocation id = new ResourceLocation(s.substring(1));
                             tagLike.addTag(id);
                         } else {
-                            tagLike.add(new Identifier(s));
+                            tagLike.add(new ResourceLocation(s));
                         }
                     });
                     return tagLike;

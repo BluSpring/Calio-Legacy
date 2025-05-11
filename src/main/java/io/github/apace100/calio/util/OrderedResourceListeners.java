@@ -2,9 +2,8 @@ package io.github.apace100.calio.util;
 
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.PackType;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,8 +16,8 @@ import java.util.Set;
 @Deprecated
 public final class OrderedResourceListeners {
 
-    private static final Set<Identifier> finalizedRegistrations = new HashSet<>();
-    private static final HashMap<Identifier, Registration> registrations = new HashMap<>();
+    private static final Set<ResourceLocation> finalizedRegistrations = new HashSet<>();
+    private static final HashMap<ResourceLocation, Registration> registrations = new HashMap<>();
 
     public static Registration register(IdentifiableResourceReloadListener resourceReloadListener) {
         Registration registration = new Registration(resourceReloadListener);
@@ -35,18 +34,18 @@ public final class OrderedResourceListeners {
     }
 
     private static void finalizeRegistration(Registration registration) {
-        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(registration.resourceReloadListener);
-        Identifier id = registration.resourceReloadListener.getFabricId();
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(registration.resourceReloadListener);
+        ResourceLocation id = registration.resourceReloadListener.getFabricId();
         finalizedRegistrations.add(id);
         registrations.remove(id);
-        Set<Identifier> finishedOnes = new HashSet<>();
-        for(Map.Entry<Identifier, Registration> registrationEntry : registrations.entrySet()) {
+        Set<ResourceLocation> finishedOnes = new HashSet<>();
+        for(Map.Entry<ResourceLocation, Registration> registrationEntry : registrations.entrySet()) {
             registrationEntry.getValue().afterSet.remove(id);
             if(registrationEntry.getValue().afterSet.size() == 0) {
                 finishedOnes.add(registrationEntry.getKey());
             }
         }
-        for(Identifier finished : finishedOnes) {
+        for(ResourceLocation finished : finishedOnes) {
             finalizeRegistration(registrations.get(finished));
         }
     }
@@ -54,15 +53,15 @@ public final class OrderedResourceListeners {
     public static class Registration {
 
         private final IdentifiableResourceReloadListener resourceReloadListener;
-        private final Set<Identifier> afterSet = new HashSet<>();
-        private final Set<Identifier> beforeSet = new HashSet<>();
+        private final Set<ResourceLocation> afterSet = new HashSet<>();
+        private final Set<ResourceLocation> beforeSet = new HashSet<>();
         private boolean isCompleted;
 
         private Registration(IdentifiableResourceReloadListener resourceReloadListener) {
             this.resourceReloadListener = resourceReloadListener;
         }
 
-        public Registration after(Identifier identifier) {
+        public Registration after(ResourceLocation identifier) {
             if(isCompleted) {
                 throw new IllegalStateException(
                     "Can't add a resource reload listener registration dependency after it was completed.");
@@ -71,7 +70,7 @@ public final class OrderedResourceListeners {
             return this;
         }
 
-        public Registration before(Identifier identifier) {
+        public Registration before(ResourceLocation identifier) {
             if(isCompleted) {
                 throw new IllegalStateException(
                     "Can't add a resource reload listener registration dependency after it was completed.");

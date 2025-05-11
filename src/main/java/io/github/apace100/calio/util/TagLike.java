@@ -1,15 +1,14 @@
 package io.github.apace100.calio.util;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
-
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 
 public class TagLike<T> {
 
@@ -21,11 +20,11 @@ public class TagLike<T> {
         this.registry = registry;
     }
 
-    public void addTag(Identifier id) {
-        addTag(TagKey.of(registry.getKey(), id));
+    public void addTag(ResourceLocation id) {
+        addTag(TagKey.create(registry.key(), id));
     }
 
-    public void add(Identifier id) {
+    public void add(ResourceLocation id) {
         add(registry.get(id));
     }
 
@@ -41,36 +40,36 @@ public class TagLike<T> {
         if(items.contains(t)) {
             return true;
         }
-        RegistryEntry<T> entry = registry.getEntry(t);
+        Holder<T> entry = registry.wrapAsHolder(t);
         for(TagKey<T> tagKey : tags) {
-            if(entry.isIn(tagKey)) {
+            if(entry.is(tagKey)) {
                 return true;
             }
         }
         return false;
     }
 
-    public void write(PacketByteBuf buf) {
+    public void write(FriendlyByteBuf buf) {
         buf.writeVarInt(tags.size());
         for(TagKey<T> tagKey : tags) {
-            buf.writeString(tagKey.id().toString());
+            buf.writeUtf(tagKey.location().toString());
         }
         buf.writeVarInt(items.size());
         for(T t : items) {
-            buf.writeString(registry.getId(t).toString());
+            buf.writeUtf(registry.getKey(t).toString());
         }
     }
 
-    public void read(PacketByteBuf buf) {
+    public void read(FriendlyByteBuf buf) {
         tags.clear();
         int count = buf.readVarInt();
         for(int i = 0; i < count; i++) {
-            tags.add(TagKey.of(registry.getKey(), new Identifier(buf.readString())));
+            tags.add(TagKey.create(registry.key(), new ResourceLocation(buf.readUtf())));
         }
         items.clear();
         count = buf.readVarInt();
         for(int i = 0; i < count; i++) {
-            T t = registry.get(new Identifier(buf.readString()));
+            T t = registry.get(new ResourceLocation(buf.readUtf()));
             items.add(t);
         }
     }
