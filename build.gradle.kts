@@ -1,14 +1,13 @@
 plugins {
-	id 'fabric-loom' version '0.12-SNAPSHOT'
-	id 'maven-publish'
+	id("fabric-loom") version "1.9-SNAPSHOT"
+	`maven-publish`
 }
 
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
-
-archivesBaseName = project.archives_base_name
-version = project.mod_version
-group = project.maven_group
+base {
+	archivesName.set(project.property("archives_base_name") as String)
+}
+version = project.property("mod_version") as String
+group = project.property("maven_group") as String
 
 repositories {
 	// Add repositories to retrieve artifacts from in here.
@@ -20,12 +19,12 @@ repositories {
 
 dependencies {
 	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
+	mappings("net.fabricmc:yarn:${project.property("yarn_mappings")}:v2")
+	modImplementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
 
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.
@@ -35,49 +34,56 @@ loom {
 	accessWidenerPath = file("src/main/resources/calio.accesswidener")
 }
 
-processResources {
-	inputs.property "version", project.version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": project.version
-	}
-}
-
-tasks.withType(JavaCompile).configureEach {
+tasks.withType<JavaCompile>().configureEach {
 	// ensure that the encoding is set to UTF-8, no matter what the system default is
 	// this fixes some edge cases with special characters not displaying correctly
 	// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
 	// If Javadoc is generated, this must be specified in that task too.
-	it.options.encoding = "UTF-8"
+	options.encoding = "UTF-8"
 
 	// Minecraft 1.17 (21w19a) upwards uses Java 16.
-	it.options.release = 17
+	options.release = 17
 }
 
+val targetJavaVersion = "17"
+
 java {
+	val javaVersion = JavaVersion.toVersion(targetJavaVersion)
+	if (JavaVersion.current() < javaVersion) {
+		toolchain.languageVersion.set(JavaLanguageVersion.of(targetJavaVersion))
+	}
+
+	sourceCompatibility = javaVersion
+	targetCompatibility = javaVersion
+
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 }
 
-jar {
-	from("LICENSE") {
-		rename { "${it}_${project.archivesBaseName}"}
+tasks {
+	processResources {
+		inputs.property("version", project.version)
+
+		filesMatching("fabric.mod.json") {
+			expand("version" to project.version)
+		}
+	}
+
+	jar {
+		from("LICENSE") {
+			rename { "${it}_${project.base.archivesName}" }
+		}
 	}
 }
 
 // configure the maven publication
 publishing {
 	publications {
-		mavenJava(MavenPublication) {
-			// add all the jars that should be included when publishing to maven
-			artifact(remapJar) {
-				builtBy remapJar
-			}
-			artifact(sourcesJar) {
-				builtBy remapSourcesJar
-			}
+		create<MavenPublication>("mavenJava") {
+			artifactId = project.property("archives_base_name") as String
+			from(components["java"])
 		}
 	}
 
@@ -87,6 +93,5 @@ publishing {
 		// Notice: This block does NOT have the same function as the block in the top level.
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
-		mavenLocal()
 	}
 }
