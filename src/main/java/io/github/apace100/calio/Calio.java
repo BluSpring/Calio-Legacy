@@ -1,30 +1,47 @@
 package io.github.apace100.calio;
 
-import io.github.apace100.calio.mixin.CriteriaRegistryInvoker;
+import com.mojang.serialization.Codec;
+import io.github.apace100.calio.network.CalioNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 
 public class Calio implements ModInitializer {
+	public static final DataComponentType<Boolean> NON_ITALIC_NAME = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, ResourceLocation.fromNamespaceAndPath("calio", "non_italic_name"), DataComponentType.<Boolean>builder()
+		.persistent(Codec.BOOL)
+		.networkSynchronized(ByteBufCodecs.BOOL)
+		.build()
+	);
+
+	public static final DataComponentType<Boolean> HAS_ADDITIONAL_ATTRIBUTES = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, ResourceLocation.fromNamespaceAndPath("calio", "has_additional_attributes"), DataComponentType.<Boolean>builder()
+		.persistent(Codec.BOOL)
+		.networkSynchronized(ByteBufCodecs.BOOL)
+		.build()
+	);
 
 	@Override
 	public void onInitialize() {
-		CriteriaRegistryInvoker.callRegister(CodeTriggerCriterion.INSTANCE);
+		CalioNetworking.init();
+		Registry.register(BuiltInRegistries.TRIGGER_TYPES, ResourceLocation.fromNamespaceAndPath("calio", "code_trigger"), CodeTriggerCriterion.INSTANCE);
 	}
 
 	public static boolean hasNonItalicName(ItemStack stack) {
-		return stack.hasTag() && stack.getTagElement("display") != null && stack.getTagElement("display").getBoolean(NbtConstants.NON_ITALIC_NAME);
+		return stack.getOrDefault(NON_ITALIC_NAME, false);
 	}
 
 	public static void setNameNonItalic(ItemStack stack) {
 		if(stack != null)
-			stack.getOrCreateTagElement("display").putBoolean(NbtConstants.NON_ITALIC_NAME, true);
+			stack.set(NON_ITALIC_NAME, true);
 	}
 
 	public static boolean areEntityAttributesAdditional(ItemStack stack) {
-		return stack.hasTag() && stack.getTag().contains(NbtConstants.ADDITIONAL_ATTRIBUTES) && stack.getTag().getBoolean(NbtConstants.ADDITIONAL_ATTRIBUTES);
+		return stack.getOrDefault(HAS_ADDITIONAL_ATTRIBUTES, false);
 	}
 
 	/**
@@ -36,11 +53,9 @@ public class Calio implements ModInitializer {
 	public static void setEntityAttributesAdditional(ItemStack stack, boolean additional) {
 		if(stack != null) {
 			if(additional) {
-				stack.getOrCreateTag().putBoolean(NbtConstants.ADDITIONAL_ATTRIBUTES, true);
+				stack.set(HAS_ADDITIONAL_ATTRIBUTES, true);
 			} else {
-				if(stack.hasTag()) {
-					stack.getTag().remove(NbtConstants.ADDITIONAL_ATTRIBUTES);
-				}
+				stack.remove(HAS_ADDITIONAL_ATTRIBUTES);
 			}
 		}
 	}

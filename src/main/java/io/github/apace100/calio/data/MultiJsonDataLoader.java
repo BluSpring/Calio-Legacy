@@ -4,18 +4,19 @@ import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.*;
 
 /***
  * Like JsonDataLoader, but provides a list of elements with an identifier, each element being loaded by a different
@@ -43,7 +44,7 @@ public abstract class MultiJsonDataLoader extends SimplePreparableReloadListener
         while(var5.hasNext()) {
             ResourceLocation identifier = var5.next().getKey();
             String string = identifier.getPath();
-            ResourceLocation identifier2 = new ResourceLocation(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
+            ResourceLocation identifier2 = ResourceLocation.fromNamespaceAndPath(identifier.getNamespace(), string.substring(i, string.length() - FILE_SUFFIX_LENGTH));
             resourcesHandled.clear();
             resourceManager.getResourceStack(identifier).forEach(resource -> {
                 if(!resourcesHandled.contains(resource.sourcePackId())) {

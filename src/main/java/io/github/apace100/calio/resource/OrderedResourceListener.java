@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.resources.ResourceLocation;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -48,7 +49,7 @@ public class OrderedResourceListener implements ModInitializer {
         }
 
         public Registration after(String identifier) {
-            return after(new ResourceLocation(identifier));
+            return after(ResourceLocation.parse(identifier));
         }
 
         public Registration after(ResourceLocation identifier) {
@@ -61,7 +62,7 @@ public class OrderedResourceListener implements ModInitializer {
         }
 
         public Registration before(String identifier) {
-            return before(new ResourceLocation(identifier));
+            return before(ResourceLocation.parse(identifier));
         }
 
         public Registration before(ResourceLocation identifier) {

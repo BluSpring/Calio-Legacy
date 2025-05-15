@@ -6,13 +6,12 @@ import io.github.apace100.calio.data.MultiJsonDataLoader;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
-import io.github.apace100.calio.network.CalioNetworking;
-import io.github.apace100.calio.util.OrderedResourceListeners;
-import io.netty.buffer.Unpooled;
+import io.github.apace100.calio.network.SyncDataObjectRegistryPacket;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.ResourceLocationException;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -28,6 +27,14 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class DataObjectRegistry<T extends DataObject<T>> {
+    public static final StreamCodec<RegistryFriendlyByteBuf, DataObjectRegistry<?>> STREAM_CODEC = StreamCodec.of((buf, registry) -> {
+        buf.writeResourceLocation(registry.getRegistryId());
+        registry.write(buf);
+    }, (buf) -> {
+        var registry = DataObjectRegistry.getRegistry(buf.readResourceLocation());
+        registry.receive(buf);
+        return registry;
+    });
 
     private static final HashMap<ResourceLocation, DataObjectRegistry<?>> REGISTRIES = new HashMap<>();
     private static final Set<ResourceLocation> AUTO_SYNC_SET = new HashSet<>();
@@ -107,7 +114,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         register(id, entry);
     }
 
-    public void write(FriendlyByteBuf buf) {
+    public void write(RegistryFriendlyByteBuf buf) {
         buf.writeInt(idToEntry.size() - staticEntries.size());
         for(Map.Entry<ResourceLocation, T> entry : idToEntry.entrySet()) {
             if(staticEntries.containsKey(entry.getKey())) {
@@ -121,18 +128,18 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         }
     }
 
-    public void writeDataObject(FriendlyByteBuf buf, T t) {
+    public void writeDataObject(RegistryFriendlyByteBuf buf, T t) {
         DataObjectFactory<T> factory = t.getFactory();
         buf.writeResourceLocation(factoryToId.get(factory));
         SerializableData.Instance data = factory.toData(t);
         factory.getData().write(buf, data);
     }
 
-    public void receive(FriendlyByteBuf buf) {
+    public void receive(RegistryFriendlyByteBuf buf) {
         receive(buf, Runnable::run);
     }
 
-    public void receive(FriendlyByteBuf buf, Consumer<Runnable> scheduler) {
+    public void receive(RegistryFriendlyByteBuf buf, Consumer<Runnable> scheduler) {
         int entryCount = buf.readInt();
         HashMap<ResourceLocation, T> entries = new HashMap<>(entryCount);
         for(int i = 0; i < entryCount; i++) {
@@ -146,7 +153,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         });
     }
 
-    public T receiveDataObject(FriendlyByteBuf buf) {
+    public T receiveDataObject(RegistryFriendlyByteBuf buf) {
         ResourceLocation factoryId = buf.readResourceLocation();
         DataObjectFactory<T> factory = getFactory(factoryId);
         SerializableData.Instance data = factory.getData().read(buf);
@@ -172,7 +179,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
             String type = GsonHelper.getAsString(jsonObject, factoryFieldName);
             ResourceLocation factoryId = null;
             try {
-                factoryId = new ResourceLocation(type);
+                factoryId = ResourceLocation.parse(type);
             } catch (ResourceLocationException e) {
                 throw new JsonParseException(
                     "Could not read data object of type \"" + registryId +
@@ -192,10 +199,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
     }
 
     public void sync(ServerPlayer player) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        buf.writeResourceLocation(registryId);
-        write(buf);
-        ServerPlayNetworking.send(player, CalioNetworking.SYNC_DATA_OBJECT_REGISTRY, buf);
+        ServerPlayNetworking.send(player, new SyncDataObjectRegistryPacket<>(this));
     }
 
     public void clear() {

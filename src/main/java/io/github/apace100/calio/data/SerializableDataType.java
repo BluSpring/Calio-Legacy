@@ -10,28 +10,29 @@ import io.github.apace100.calio.FilterableWeightedList;
 import io.github.apace100.calio.mixin.WeightedListEntryAccessor;
 import io.github.apace100.calio.util.ArgumentWrapper;
 import io.github.apace100.calio.util.TagLike;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import net.minecraft.core.Registry;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.GsonHelper;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 public class SerializableDataType<T> {
 
     private final Class<T> dataClass;
-    private final BiConsumer<FriendlyByteBuf, T> send;
-    private final Function<FriendlyByteBuf, T> receive;
+    private final BiConsumer<RegistryFriendlyByteBuf, T> send;
+    private final Function<RegistryFriendlyByteBuf, T> receive;
     private final Function<JsonElement, T> read;
 
     public SerializableDataType(Class<T> dataClass,
-                                BiConsumer<FriendlyByteBuf, T> send,
-                                Function<FriendlyByteBuf, T> receive,
+                                BiConsumer<RegistryFriendlyByteBuf, T> send,
+                                Function<RegistryFriendlyByteBuf, T> receive,
                                 Function<JsonElement, T> read) {
         this.dataClass = dataClass;
         this.send = send;
@@ -39,11 +40,11 @@ public class SerializableDataType<T> {
         this.read = read;
     }
 
-    public void send(FriendlyByteBuf buffer, Object value) {
+    public void send(RegistryFriendlyByteBuf buffer, Object value) {
         send.accept(buffer, cast(value));
     }
 
-    public T receive(FriendlyByteBuf buffer) {
+    public T receive(RegistryFriendlyByteBuf buffer) {
         return receive.apply(buffer);
     }
 
@@ -334,10 +335,10 @@ public class SerializableDataType<T> {
                     jsonArray.forEach(je -> {
                         String s = je.getAsString();
                         if (s.startsWith("#")) {
-                            ResourceLocation id = new ResourceLocation(s.substring(1));
+                            ResourceLocation id = ResourceLocation.parse(s.substring(1));
                             tagLike.addTag(id);
                         } else {
-                            tagLike.add(new ResourceLocation(s));
+                            tagLike.add(ResourceLocation.parse(s));
                         }
                     });
                     return tagLike;
