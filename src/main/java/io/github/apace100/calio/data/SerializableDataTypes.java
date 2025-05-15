@@ -14,6 +14,7 @@ import net.minecraft.ResourceLocationException;
 import net.minecraft.commands.arguments.NbtPathArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentPatch;
@@ -45,6 +46,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -228,12 +230,31 @@ public final class SerializableDataTypes {
     public static SerializableDataType<ResourceKey<Level>> DIMENSION = SerializableDataType.registryKey(Registries.DIMENSION);
 
 
-    public static final SerializableDataType<Attribute> ATTRIBUTE = SerializableDataType.registry(Attribute.class, BuiltInRegistries.ATTRIBUTE);
+    private static final List<String> ATTRIBUTE_PREFIXES = List.of("generic.", "horse.", "player.", "zombie.");
+    public static final SerializableDataType<Holder<Attribute>> ATTRIBUTE = SerializableDataType.registryHolderWithRemap(BuiltInRegistries.ATTRIBUTE, id -> {
+        if (id.getNamespace().equals("reach-entity-attributes") && id.getPath().equals("reach")) {
+            return Attributes.BLOCK_INTERACTION_RANGE; // TODO O-L: merge reach
+        }
 
-    public static final SerializableDataType<AttributeModifier.Operation> MODIFIER_OPERATION = SerializableDataType.enumValue(AttributeModifier.Operation.class);
+        if (ATTRIBUTE_PREFIXES.stream().anyMatch(e -> id.getPath().startsWith(e))) {
+            var prefix = ATTRIBUTE_PREFIXES.stream().filter(e -> id.getPath().startsWith(e)).findFirst().orElseThrow();
+            return BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath().substring(prefix.length()))).orElseThrow();
+        }
+
+        return null;
+    });
+
+    public static final SerializableDataType<AttributeModifier.Operation> MODIFIER_OPERATION = SerializableDataType.enumValue(AttributeModifier.Operation.class, new HashMap<>(Map.of(
+        "addition", AttributeModifier.Operation.ADD_VALUE,
+        "ADDITION", AttributeModifier.Operation.ADD_VALUE,
+        "multiply_base", AttributeModifier.Operation.ADD_MULTIPLIED_BASE,
+        "MULTIPLY_BASE", AttributeModifier.Operation.ADD_MULTIPLIED_BASE,
+        "multiply_total", AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL,
+        "MULTIPLY_TOTAL", AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+    )));
 
     public static final SerializableDataType<AttributeModifier> ATTRIBUTE_MODIFIER = SerializableDataType.compound(AttributeModifier.class, new SerializableData()
-            .add("name", STRING, "calio:unnamed")
+            .add("name", IDENTIFIER, ResourceLocation.parse("calio:unnamed"))
             .add("operation", MODIFIER_OPERATION)
             .add("value", DOUBLE),
         data -> new AttributeModifier(

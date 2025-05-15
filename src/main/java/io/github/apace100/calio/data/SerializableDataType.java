@@ -10,6 +10,7 @@ import io.github.apace100.calio.FilterableWeightedList;
 import io.github.apace100.calio.mixin.WeightedListEntryAccessor;
 import io.github.apace100.calio.util.ArgumentWrapper;
 import io.github.apace100.calio.util.TagLike;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -173,6 +174,41 @@ public class SerializableDataType<T> {
         });
     }
 
+    public static <T> SerializableDataType<T> registryWithRemap(Class<T> dataClass, Registry<T> registry, Function<ResourceLocation, T> remap) {
+        return wrap(dataClass, SerializableDataTypes.IDENTIFIER, registry::getKey, id -> {
+            var remapped = remap.apply(id);
+
+            if (remapped != null)
+                return remapped;
+
+            Optional<T> optional = registry.getOptional(id);
+            if(optional.isPresent()) {
+                return optional.get();
+            } else {
+                throw new RuntimeException(
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().location() + "\".");
+            }
+        });
+    }
+
+    public static <T> SerializableDataType<Holder<T>> registryHolderWithRemap(Registry<T> registry, Function<ResourceLocation, Holder<T>> remap) {
+        return wrap(ClassUtil.castClass(Holder.class), SerializableDataTypes.IDENTIFIER,
+            e -> e.unwrapKey().orElseThrow().location(), id -> {
+            var remapped = remap.apply(id);
+
+            if (remapped != null)
+                return remapped;
+
+            Optional<Holder.Reference<T>> optional = registry.get(id);
+            if(optional.isPresent()) {
+                return optional.get();
+            } else {
+                throw new RuntimeException(
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().location() + "\".");
+            }
+        });
+    }
+
     public static <T> SerializableDataType<T> compound(Class<T> dataClass, SerializableData data, Function<SerializableData.Instance, T> toInstance, BiFunction<SerializableData, T, SerializableData.Instance> toData) {
         return new SerializableDataType<>(dataClass,
             (buf, t) -> data.write(buf, toData.apply(data, t)),
@@ -265,6 +301,12 @@ public class SerializableDataType<T> {
         return SerializableDataType.wrap(ClassUtil.castClass(TagKey.class), SerializableDataTypes.IDENTIFIER,
             TagKey::location,
             id -> TagKey.create(registryKey, id));
+    }
+
+    public static <T> SerializableDataType<Holder<T>> holder(Registry<T> registry) {
+        return SerializableDataType.wrap(ClassUtil.castClass(Holder.class), SerializableDataTypes.IDENTIFIER,
+            e -> e.unwrapKey().orElseThrow().location(),
+            id -> registry.get(id).orElseThrow());
     }
 
     public static <T> SerializableDataType<ResourceKey<T>> registryKey(ResourceKey<Registry<T>> registryKeyRegistry) {
