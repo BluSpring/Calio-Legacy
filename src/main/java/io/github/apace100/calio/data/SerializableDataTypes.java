@@ -468,7 +468,7 @@ public final class SerializableDataTypes {
         "success", InteractionResult.SUCCESS,
         "success_server", InteractionResult.SUCCESS_SERVER,
         "consume", InteractionResult.CONSUME,
-        "consume_partial", InteractionResult.CONSUME,
+        //"consume_partial", InteractionResult.CONSUME,
         "pass", InteractionResult.PASS,
         "fail", InteractionResult.FAIL
     )));
