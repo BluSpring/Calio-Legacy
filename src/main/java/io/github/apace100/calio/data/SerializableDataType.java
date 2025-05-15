@@ -12,6 +12,7 @@ import io.github.apace100.calio.util.ArgumentWrapper;
 import io.github.apace100.calio.util.TagLike;
 import net.minecraft.core.Registry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -38,6 +39,10 @@ public class SerializableDataType<T> {
         this.send = send;
         this.receive = receive;
         this.read = read;
+    }
+
+    public StreamCodec<RegistryFriendlyByteBuf, T> streamCodec() {
+        return StreamCodec.of(this::send, this::receive);
     }
 
     public void send(RegistryFriendlyByteBuf buffer, Object value) {

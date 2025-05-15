@@ -5,17 +5,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.*;
 import com.google.gson.internal.LazilyParsedNumber;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import io.github.apace100.calio.ClassUtil;
 import io.github.apace100.calio.SerializationHelper;
-import io.github.apace100.calio.util.ArgumentWrapper;
-import io.github.apace100.calio.util.IngredientValue;
-import io.github.apace100.calio.util.StatusEffectChance;
-import io.github.apace100.calio.util.TagLike;
+import io.github.apace100.calio.util.*;
 import io.github.apace100.calio.util.extensions.LegacyParticleOptionFactory;
 import net.minecraft.ResourceLocationException;
-import net.minecraft.SharedConstants;
 import net.minecraft.commands.arguments.NbtPathArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.Direction;
@@ -41,8 +36,6 @@ import net.minecraft.stats.StatType;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.GsonHelper;
-import net.minecraft.util.datafix.DataFixers;
-import net.minecraft.util.datafix.fixes.References;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageType;
@@ -408,15 +401,14 @@ public final class SerializableDataTypes {
     );
 
     public static final SerializableDataType<ItemStack> ITEM_STACK = new SerializableDataType<>(ItemStack.class,
-        ItemStack.STREAM_CODEC::encode,
-        ItemStack.STREAM_CODEC::decode,
+        ItemStack.OPTIONAL_STREAM_CODEC::encode,
+        ItemStack.OPTIONAL_STREAM_CODEC::decode,
         (data) ->  {
             if (data.isJsonObject()) {
                 var json = data.getAsJsonObject();
-                if (json.getAsJsonObject().has("item") || json.getAsJsonObject().has("tag")) {
+                if (json.has("item") || json.has("tag")) {
                     // Convert legacy item stack to modern item stack
-                    var updated = DataFixers.getDataFixer().update(References.ITEM_STACK, new Dynamic<>(JsonOps.INSTANCE, data), 3465, SharedConstants.WORLD_VERSION); // convert 1.20.1 -> current version
-                    data = updated.getValue();
+                    data = UpgradeUtils.upgradeStack(json);
                 }
             }
 
