@@ -220,7 +220,7 @@ public final class SerializableDataTypes {
                     }
                 }
             }
-            return ResourceLocation.parse(idString);
+            return convertNameToLocation(idString);
         });
 
     public static final SerializableDataType<List<ResourceLocation>> IDENTIFIERS = SerializableDataType.list(IDENTIFIER);
@@ -258,7 +258,7 @@ public final class SerializableDataTypes {
             .add("operation", MODIFIER_OPERATION)
             .add("value", DOUBLE),
         data -> new AttributeModifier(
-            convertNameToLocation(data.getString("name")),
+            data.getId("name"),
             data.getDouble("value"),
             data.get("operation")
         ),
