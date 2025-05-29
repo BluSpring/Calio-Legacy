@@ -254,17 +254,17 @@ public final class SerializableDataTypes {
     )));
 
     public static final SerializableDataType<AttributeModifier> ATTRIBUTE_MODIFIER = SerializableDataType.compound(AttributeModifier.class, new SerializableData()
-            .add("name", IDENTIFIER, ResourceLocation.parse("calio:unnamed"))
+            .add("name", STRING, "calio:unnamed")
             .add("operation", MODIFIER_OPERATION)
             .add("value", DOUBLE),
         data -> new AttributeModifier(
-            data.getId("name"),
+            SerializableDataTypes.convertNameToLocation(data.getString("name")),
             data.getDouble("value"),
             data.get("operation")
         ),
         (serializableData, modifier) -> {
             SerializableData.Instance inst = serializableData.new Instance();
-            inst.set("name", modifier.id());
+            inst.set("name", modifier.id().toString());
             inst.set("value", modifier.amount());
             inst.set("operation", modifier.operation());
             return inst;
