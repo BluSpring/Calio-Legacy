@@ -236,6 +236,10 @@ public final class SerializableDataTypes {
             return Attributes.BLOCK_INTERACTION_RANGE; // TODO O-L: merge reach
         }
 
+        if (id.getNamespace().equals("reach-entity-attributes") && id.getPath().equals("attack_range")) {
+            return Attributes.ENTITY_INTERACTION_RANGE;
+        }
+
         if (ATTRIBUTE_PREFIXES.stream().anyMatch(e -> id.getPath().startsWith(e))) {
             var prefix = ATTRIBUTE_PREFIXES.stream().filter(e -> id.getPath().startsWith(e)).findFirst().orElseThrow();
             return BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath().substring(prefix.length()))).orElseThrow();
