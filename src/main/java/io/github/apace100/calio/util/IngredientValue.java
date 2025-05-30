@@ -1,19 +1,15 @@
 package io.github.apace100.calio.util;
 
-import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
-import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.level.ItemLike;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 public interface IngredientValue {
-    Collection<ItemLike> getItems();
+    HolderSet<Item> getItems(HolderLookup.Provider provider);
     JsonObject serialize();
 
     class TagValue implements IngredientValue {
@@ -24,13 +20,8 @@ public interface IngredientValue {
         }
 
         @Override
-        public Collection<ItemLike> getItems() {
-            List<ItemLike> list = Lists.newArrayList();
-            for (Holder<Item> holder : BuiltInRegistries.ITEM.getTagOrEmpty(tag)) {
-                list.add(holder.value());
-            }
-
-            return list;
+        public HolderSet<Item> getItems(HolderLookup.Provider provider) {
+            return provider.lookupOrThrow(Registries.ITEM).getOrThrow(tag);
         }
 
         @Override
@@ -50,8 +41,8 @@ public interface IngredientValue {
         }
 
         @Override
-        public Collection<ItemLike> getItems() {
-            return Collections.singleton(item);
+        public HolderSet<Item> getItems(HolderLookup.Provider provider) {
+            return HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(item));
         }
 
         @Override

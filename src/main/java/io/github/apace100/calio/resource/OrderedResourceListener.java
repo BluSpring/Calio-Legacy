@@ -3,10 +3,12 @@ package io.github.apace100.calio.resource;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * @deprecated  Deprecated in favour of using Fabric's IdentifiableResourceReloadListener.
@@ -38,6 +40,7 @@ public class OrderedResourceListener implements ModInitializer {
         private final OrderedResourceListenerManager.Instance manager;
         final ResourceLocation id;
         final IdentifiableResourceReloadListener resourceReloadListener;
+        final Function<HolderLookup.Provider, IdentifiableResourceReloadListener> reloadListenerProvider;
         final Set<ResourceLocation> dependencies = new HashSet<>();
         final Set<ResourceLocation> dependants = new HashSet<>();
         private boolean isCompleted;
@@ -46,6 +49,14 @@ public class OrderedResourceListener implements ModInitializer {
             this.id = listener.getFabricId();
             this.manager = manager;
             this.resourceReloadListener = listener;
+            this.reloadListenerProvider = null;
+        }
+
+        Registration(ResourceLocation id, OrderedResourceListenerManager.Instance manager, Function<HolderLookup.Provider, IdentifiableResourceReloadListener> listenerProvider) {
+            this.id = id;
+            this.manager = manager;
+            this.resourceReloadListener = null;
+            this.reloadListenerProvider = listenerProvider;
         }
 
         public Registration after(String identifier) {

@@ -3,6 +3,7 @@ package io.github.apace100.calio.data;
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -73,7 +74,7 @@ public class SerializableData {
         return instance;
     }
 
-    public Instance read(JsonObject jsonObject) {
+    public Instance read(JsonObject jsonObject, HolderLookup.Provider provider) {
         Instance instance = new Instance();
         dataFields.forEach((name, field) -> {
             try {
@@ -84,7 +85,7 @@ public class SerializableData {
                         throw new JsonSyntaxException("JSON requires field: " + name);
                     }
                 } else {
-                    instance.set(name, field.dataType.read(jsonObject.get(name)));
+                    instance.set(name, field.dataType.read(jsonObject.get(name), provider));
                 }
             } catch (DataException e) {
                 throw e.prepend(name);

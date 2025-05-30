@@ -11,6 +11,7 @@ import io.github.apace100.calio.mixin.WeightedListEntryAccessor;
 import io.github.apace100.calio.util.ArgumentWrapper;
 import io.github.apace100.calio.util.TagLike;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -18,6 +19,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.GsonHelper;
+import org.apache.commons.lang3.function.TriFunction;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,12 +32,19 @@ public class SerializableDataType<T> {
     private final Class<T> dataClass;
     private final BiConsumer<RegistryFriendlyByteBuf, T> send;
     private final Function<RegistryFriendlyByteBuf, T> receive;
-    private final Function<JsonElement, T> read;
+    private final BiFunction<JsonElement, HolderLookup.Provider, T> read;
 
     public SerializableDataType(Class<T> dataClass,
                                 BiConsumer<RegistryFriendlyByteBuf, T> send,
                                 Function<RegistryFriendlyByteBuf, T> receive,
                                 Function<JsonElement, T> read) {
+        this(dataClass, send, receive, (json, provider) -> read.apply(json));
+    }
+
+    public SerializableDataType(Class<T> dataClass,
+                                BiConsumer<RegistryFriendlyByteBuf, T> send,
+                                Function<RegistryFriendlyByteBuf, T> receive,
+                                BiFunction<JsonElement, HolderLookup.Provider, T> read) {
         this.dataClass = dataClass;
         this.send = send;
         this.receive = receive;
@@ -54,8 +63,8 @@ public class SerializableDataType<T> {
         return receive.apply(buffer);
     }
 
-    public T read(JsonElement jsonElement) {
-        return read.apply(jsonElement);
+    public T read(JsonElement jsonElement, HolderLookup.Provider provider) {
+        return read.apply(jsonElement, provider);
     }
 
     public T cast(Object data) {
@@ -89,13 +98,13 @@ public class SerializableDataType<T> {
                 }
             }
             return list;
-        }, (json) -> {
+        }, (json, provider) -> {
             LinkedList<T> list = new LinkedList<>();
             if(json.isJsonArray()) {
                 int i = 0;
                 for(JsonElement je : json.getAsJsonArray()) {
                     try {
-                        list.add(singleDataType.read(je));
+                        list.add(singleDataType.read(je, provider));
                     } catch(DataException e) {
                         throw e.prepend("[" + i + "]");
                     } catch(Exception e) {
@@ -104,7 +113,7 @@ public class SerializableDataType<T> {
                     i++;
                 }
             } else {
-                list.add(singleDataType.read(json));
+                list.add(singleDataType.read(json, provider));
             }
             return list;
         });
@@ -140,14 +149,14 @@ public class SerializableDataType<T> {
                 }
             }
             return list;
-        }, (json) -> {
+        }, (json, provider) -> {
             FilterableWeightedList<T> list = new FilterableWeightedList<>();
             if (json.isJsonArray()) {
                 int i = 0;
                 for (JsonElement je : json.getAsJsonArray()) {
                     try {
                         JsonObject weightedObj = je.getAsJsonObject();
-                        T elem = singleDataType.read(weightedObj.get("element"));
+                        T elem = singleDataType.read(weightedObj.get("element"), provider);
                         int weight = GsonHelper.getAsInt(weightedObj, "weight");
                         list.add(elem, weight);
                     } catch(DataException e) {
@@ -213,7 +222,14 @@ public class SerializableDataType<T> {
         return new SerializableDataType<>(dataClass,
             (buf, t) -> data.write(buf, toData.apply(data, t)),
             (buf) -> toInstance.apply(data.read(buf)),
-            (json) -> toInstance.apply(data.read(json.getAsJsonObject())));
+            (json, provider) -> toInstance.apply(data.read(json.getAsJsonObject(), provider)));
+    }
+
+    public static <T> SerializableDataType<T> compound(Class<T> dataClass, SerializableData data, Function<SerializableData.Instance, T> toInstance, TriFunction<SerializableData, HolderLookup.Provider, T, SerializableData.Instance> toData) {
+        return new SerializableDataType<>(dataClass,
+            (buf, t) -> data.write(buf, toData.apply(data, buf.registryAccess(), t)),
+            (buf) -> toInstance.apply(data.read(buf)),
+            (json, provider) -> toInstance.apply(data.read(json.getAsJsonObject(), provider)));
     }
 
     public static <T extends Enum<T>> SerializableDataType<T> enumValue(Class<T> dataClass) {
@@ -294,7 +310,7 @@ public class SerializableDataType<T> {
         return new SerializableDataType<>(dataClass,
             (buf, t) -> base.send(buf, toFunction.apply(t)),
             (buf) -> fromFunction.apply(base.receive(buf)),
-            (json) -> fromFunction.apply(base.read(json)));
+            (json, provider) -> fromFunction.apply(base.read(json, provider)));
     }
 
     public static <T> SerializableDataType<TagKey<T>> tag(ResourceKey<? extends Registry<T>> registryKey) {
@@ -333,16 +349,16 @@ public class SerializableDataType<T> {
                 }
                 return set;
             },
-            (json) -> {
+            (json, provider) -> {
                 EnumSet<T> set = EnumSet.noneOf(enumClass);
                 if(json.isJsonPrimitive()) {
-                    T t = enumDataType.read.apply(json);
+                    T t = enumDataType.read.apply(json, provider);
                     set.add(t);
                 } else
                 if(json.isJsonArray()) {
                     JsonArray array = json.getAsJsonArray();
                     for (JsonElement jsonElement : array) {
-                        T t = enumDataType.read.apply(jsonElement);
+                        T t = enumDataType.read.apply(jsonElement, provider);
                         set.add(t);
                     }
                 } else {

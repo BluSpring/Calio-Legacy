@@ -25,6 +25,11 @@ public class DataException extends RuntimeException {
         return super.getMessage() + " at " + path + ": " + exception.getMessage();
     }
 
+    @Override
+    public synchronized Throwable getCause() {
+        return exception;
+    }
+
     public enum Phase {
         READING,
         RECEIVING,

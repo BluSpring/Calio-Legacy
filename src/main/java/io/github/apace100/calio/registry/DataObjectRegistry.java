@@ -10,6 +10,8 @@ import io.github.apace100.calio.network.SyncDataObjectRegistryPacket;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.ResourceLocationException;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
@@ -194,7 +196,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         } else {
             factory = defaultFactory;
         }
-        SerializableData.Instance data = factory.getData().read(jsonObject);
+        SerializableData.Instance data = factory.getData().read(jsonObject, RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY));
         return factory.fromData(data);
     }
 

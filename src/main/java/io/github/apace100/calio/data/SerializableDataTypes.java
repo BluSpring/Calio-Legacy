@@ -317,7 +317,7 @@ public final class SerializableDataTypes {
             } else {
                 return new IngredientValue.ItemValue(dataInstance.get("item"));
             }
-        }, (data, entry) -> data.read(entry.serialize()));
+        }, (data, provider, entry) -> data.read(entry.serialize(), provider));
 
     public static final SerializableDataType<List<IngredientValue>> INGREDIENT_ENTRIES = SerializableDataType.list(INGREDIENT_ENTRY);
 
@@ -326,9 +326,9 @@ public final class SerializableDataTypes {
         Ingredient.class,
         Ingredient.CONTENTS_STREAM_CODEC::encode,
         Ingredient.CONTENTS_STREAM_CODEC::decode,
-        jsonElement -> {
-            List<IngredientValue> entryList = INGREDIENT_ENTRIES.read(jsonElement);
-            return Ingredient.of(entryList.stream().flatMap(e -> e.getItems().stream()));
+        (jsonElement, provider) -> {
+            List<IngredientValue> entryList = INGREDIENT_ENTRIES.read(jsonElement, provider);
+            return Ingredient.of(new MergedHolderSet<>(entryList.stream().map(e -> e.getItems(provider)).toList()));
         });
 
     // The regular vanilla Minecraft ingredient.
@@ -336,7 +336,7 @@ public final class SerializableDataTypes {
         Ingredient.class,
         Ingredient.CONTENTS_STREAM_CODEC::encode,
         Ingredient.CONTENTS_STREAM_CODEC::decode,
-        jsonElement -> Ingredient.CODEC.decode(JsonOps.INSTANCE, jsonElement).getOrThrow().getFirst());
+        (jsonElement, provider) -> Ingredient.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), jsonElement).getOrThrow().getFirst());
 
     public static final SerializableDataType<Block> BLOCK = SerializableDataType.registry(Block.class, BuiltInRegistries.BLOCK);
 
@@ -372,16 +372,16 @@ public final class SerializableDataTypes {
     public static final SerializableDataType<ParticleOptions> PARTICLE_EFFECT = new SerializableDataType<>(ParticleOptions.class,
         ParticleTypes.STREAM_CODEC::encode,
         ParticleTypes.STREAM_CODEC::decode,
-        json -> {
+        (json, provider) -> {
             var jsonObject = json.getAsJsonObject();
-            ParticleType<? extends ParticleOptions> particleType = PARTICLE_TYPE.read(jsonObject.get("type"));
+            ParticleType<? extends ParticleOptions> particleType = PARTICLE_TYPE.read(jsonObject.get("type"), provider);
             var codec = particleType.codec();
             ParticleOptions effect = null;
             try {
                 if (particleType instanceof LegacyParticleOptionFactory factory)
                     effect = factory.calio$createFromParams(jsonObject.get("params").getAsString());
                 else
-                    effect = particleType.codec().codec().decode(JsonOps.INSTANCE, jsonObject.get("params")).getOrThrow().getFirst();
+                    effect = particleType.codec().codec().decode(provider.createSerializationContext(JsonOps.INSTANCE), jsonObject.get("params")).getOrThrow().getFirst();
             } catch (Throwable e) {
                 throw new RuntimeException(e);
             }
@@ -392,15 +392,15 @@ public final class SerializableDataTypes {
     public static final SerializableDataType<ParticleOptions> PARTICLE_EFFECT_OR_TYPE = new SerializableDataType<>(ParticleOptions.class,
         PARTICLE_EFFECT::send,
         PARTICLE_EFFECT::receive,
-        jsonElement -> {
+        (jsonElement, provider) -> {
             if(jsonElement.isJsonPrimitive() && jsonElement.getAsJsonPrimitive().isString()) {
-                ParticleType<?> type = PARTICLE_TYPE.read(jsonElement);
+                ParticleType<?> type = PARTICLE_TYPE.read(jsonElement, provider);
                 if(type instanceof ParticleOptions) {
                     return (ParticleOptions) type;
                 }
                 throw new RuntimeException("Expected either a string with a parameter-less particle effect, or an object.");
             } else if(jsonElement.isJsonObject()) {
-                return PARTICLE_EFFECT.read(jsonElement);
+                return PARTICLE_EFFECT.read(jsonElement, provider);
             }
             throw new RuntimeException("Expected either a string with a parameter-less particle effect, or an object.");
         });
@@ -428,7 +428,7 @@ public final class SerializableDataTypes {
     public static final SerializableDataType<ItemStack> ITEM_STACK = new SerializableDataType<>(ItemStack.class,
         ItemStack.OPTIONAL_STREAM_CODEC::encode,
         ItemStack.OPTIONAL_STREAM_CODEC::decode,
-        (data) ->  {
+        (data, provider) ->  {
             if (data.isJsonObject()) {
                 var json = data.getAsJsonObject();
                 if (json.has("item") || json.has("tag")) {
@@ -437,7 +437,7 @@ public final class SerializableDataTypes {
                 }
             }
 
-            return ItemStack.OPTIONAL_CODEC.decode(JsonOps.INSTANCE, data).getOrThrow().getFirst();
+            return ItemStack.OPTIONAL_CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), data).getOrThrow().getFirst();
         }
     );
 
@@ -453,7 +453,7 @@ public final class SerializableDataTypes {
     public static final SerializableDataType<Recipe> RECIPE = new SerializableDataType<>(Recipe.class,
         Recipe.STREAM_CODEC::encode,
         Recipe.STREAM_CODEC::decode,
-        (jsonElement) -> {
+        (jsonElement, provider) -> {
             if(!jsonElement.isJsonObject()) {
                 throw new RuntimeException("Expected recipe to be a JSON object.");
             }
@@ -461,7 +461,7 @@ public final class SerializableDataTypes {
             ResourceLocation recipeSerializerId = ResourceLocation.tryParse(GsonHelper.getAsString(json, "type"));
             ResourceLocation recipeId = ResourceLocation.tryParse(GsonHelper.getAsString(json, "id"));
             RecipeSerializer<?> serializer = BuiltInRegistries.RECIPE_SERIALIZER.getValue(recipeSerializerId);
-            return serializer.codec().codec().decode(JsonOps.INSTANCE, json).getOrThrow().getFirst();
+            return serializer.codec().codec().decode(provider.createSerializationContext(JsonOps.INSTANCE), json).getOrThrow().getFirst();
         });
 
     public static final SerializableDataType<GameEvent> GAME_EVENT = SerializableDataType.registry(GameEvent.class, BuiltInRegistries.GAME_EVENT);
@@ -639,7 +639,7 @@ public final class SerializableDataTypes {
     public static final SerializableDataType<DataComponentPatch> DATA_COMPONENTS = new SerializableDataType<>(DataComponentPatch.class,
         DataComponentPatch.STREAM_CODEC::encode,
         DataComponentPatch.STREAM_CODEC::decode,
-        (element) -> DataComponentPatch.CODEC.decode(JsonOps.INSTANCE, element).getOrThrow().getFirst()
+        (element, provider) -> DataComponentPatch.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), element).getOrThrow().getFirst()
     );
 
     public static ResourceLocation convertNameToLocation(String name) {
