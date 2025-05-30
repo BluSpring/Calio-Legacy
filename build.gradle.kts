@@ -6,7 +6,8 @@ plugins {
 base {
 	archivesName.set(project.property("archives_base_name") as String)
 }
-version = project.property("mod_version") as String
+
+version = "${project.property("mod_version")}+${project.property("minecraft_version")}"
 group = project.property("maven_group") as String
 
 repositories {
@@ -76,7 +77,7 @@ tasks {
 
 	jar {
 		from("LICENSE") {
-			rename { "${it}_${project.base.archivesName}" }
+			rename { "${it}_${project.base.archivesName.get()}" }
 		}
 	}
 }
