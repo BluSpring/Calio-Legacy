@@ -457,7 +457,7 @@ public final class SerializableDataTypes {
             if(!jsonElement.isJsonObject()) {
                 throw new RuntimeException("Expected recipe to be a JSON object.");
             }
-            JsonObject json = jsonElement.getAsJsonObject();
+            JsonObject json = UpgradeUtils.upgradeRecipe(jsonElement.getAsJsonObject());
             ResourceLocation recipeSerializerId = ResourceLocation.tryParse(GsonHelper.getAsString(json, "type"));
             ResourceLocation recipeId = ResourceLocation.tryParse(GsonHelper.getAsString(json, "id"));
             RecipeSerializer<?> serializer = BuiltInRegistries.RECIPE_SERIALIZER.getValue(recipeSerializerId);

@@ -1,6 +1,8 @@
 package io.github.apace100.calio.util;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.SharedConstants;
@@ -28,5 +30,55 @@ public class UpgradeUtils {
         dynamic = (Dynamic<T>) Dynamic.copyField(dynamic, "Item", dynamic, "id");
 
         return fixer.update(References.ITEM_STACK, dynamic, LAST_ORIGINS_TAG_VERSION, SharedConstants.WORLD_VERSION);
+    }
+
+    public static JsonObject upgradeRecipe(JsonObject json) {
+        if (json.has("ingredients")) {
+            var ingredients = json.get("ingredients");
+
+            if (ingredients.isJsonArray()) {
+                var array = ingredients.getAsJsonArray();
+                var newArray = new JsonArray();
+
+                for (JsonElement element : array) {
+                    if (element.isJsonObject()) {
+                        var obj = element.getAsJsonObject();
+
+                        if (obj.has("item")) {
+                            newArray.add(obj.get("item").getAsString());
+                        } else if (obj.has("tag")) {
+                            newArray.add("#" + obj.get("tag").getAsString());
+                        }
+                    } else if (element.isJsonArray()) {
+                        for (JsonElement ele2 : element.getAsJsonArray()) {
+                            if (ele2.isJsonObject()) {
+                                var obj = ele2.getAsJsonObject();
+
+                                if (obj.has("item")){
+                                    newArray.add(obj.get("item").getAsString());
+                                } else if (obj.has("tag")) {
+                                    newArray.add("#" + obj.get("tag").getAsString());
+                                }
+                            } else {
+                                newArray.add(ele2);
+                            }
+                        }
+                    }
+                }
+
+                json.remove("ingredients");
+                json.add("ingredients", newArray);
+            }
+        }
+
+        if (json.has("result") && json.get("result").isJsonObject()) {
+            var result = json.getAsJsonObject("result");
+
+            if (result.has("item")) {
+                result.addProperty("id", result.get("item").getAsString());
+            }
+        }
+
+        return json;
     }
 }
