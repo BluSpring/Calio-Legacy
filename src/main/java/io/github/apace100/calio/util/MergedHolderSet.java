@@ -38,20 +38,6 @@ public class MergedHolderSet<T> implements HolderSet<T> {
     }
 
     @Override
-    public boolean isBound() {
-        var isBound = true;
-
-        for (HolderSet<T> set : holderSets) {
-            if (!set.isBound()) {
-                isBound = false;
-                break;
-            }
-        }
-
-        return isBound;
-    }
-
-    @Override
     public Either<TagKey<T>, List<Holder<T>>> unwrap() {
         var leftEithers = new ArrayList<TagKey<T>>();
         var rightEithers = new ArrayList<Holder<T>>();

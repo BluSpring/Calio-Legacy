@@ -208,7 +208,7 @@ public class SerializableDataType<T> {
             if (remapped != null)
                 return remapped;
 
-            Optional<Holder.Reference<T>> optional = registry.get(id);
+            Optional<Holder.Reference<T>> optional = registry.getHolder(id);
             if(optional.isPresent()) {
                 return optional.get();
             } else {
@@ -313,6 +313,13 @@ public class SerializableDataType<T> {
             (json, provider) -> fromFunction.apply(base.read(json, provider)));
     }
 
+    public static <T, U> SerializableDataType<T> wrap(Class<T> dataClass, SerializableDataType<U> base, BiFunction<T, HolderLookup.Provider, U> toFunction, BiFunction<U, HolderLookup.Provider, T> fromFunction) {
+        return new SerializableDataType<>(dataClass,
+            (buf, t) -> base.send(buf, toFunction.apply(t, buf.registryAccess())),
+            (buf) -> fromFunction.apply(base.receive(buf), buf.registryAccess()),
+            (json, provider) -> fromFunction.apply(base.read(json, provider), provider));
+    }
+
     public static <T> SerializableDataType<TagKey<T>> tag(ResourceKey<? extends Registry<T>> registryKey) {
         return SerializableDataType.wrap(ClassUtil.castClass(TagKey.class), SerializableDataTypes.IDENTIFIER,
             TagKey::location,
@@ -322,7 +329,7 @@ public class SerializableDataType<T> {
     public static <T> SerializableDataType<Holder<T>> holder(Registry<T> registry) {
         return SerializableDataType.wrap(ClassUtil.castClass(Holder.class), SerializableDataTypes.IDENTIFIER,
             e -> e.unwrapKey().orElseThrow().location(),
-            id -> registry.get(id).orElseThrow());
+            id -> registry.getHolder(id).orElseThrow());
     }
 
     public static <T> SerializableDataType<ResourceKey<T>> registryKey(ResourceKey<Registry<T>> registryKeyRegistry) {

@@ -46,7 +46,7 @@ public class SerializationHelper {
         if(jsonElement.isJsonObject()) {
             JsonObject json = jsonElement.getAsJsonObject();
             String effect = GsonHelper.getAsString(json, "effect");
-            var effectOptional = BuiltInRegistries.MOB_EFFECT.get(ResourceLocation.tryParse(effect));
+            var effectOptional = BuiltInRegistries.MOB_EFFECT.getHolder(ResourceLocation.tryParse(effect));
             if(!effectOptional.isPresent()) {
                 throw new JsonSyntaxException("Error reading status effect: could not find status effect with id: " + effect);
             }
@@ -68,7 +68,7 @@ public class SerializationHelper {
         boolean ambient = buf.readBoolean();
         boolean showParticles = buf.readBoolean();
         boolean showIcon = buf.readBoolean();
-        return new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.get(effect).orElseThrow(), duration, amplifier, ambient, showParticles, showIcon);
+        return new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.getHolder(effect).orElseThrow(), duration, amplifier, ambient, showParticles, showIcon);
     }
 
     public static void writeStatusEffect(FriendlyByteBuf buf, MobEffectInstance statusEffectInstance) {

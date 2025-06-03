@@ -68,7 +68,7 @@ public class TagLike<T> {
     }
 
     public void add(ResourceLocation id) {
-        add(registry.getValue(id));
+        add(registry.get(id));
     }
 
     public void addTag(TagKey<T> tagKey) {
@@ -112,7 +112,7 @@ public class TagLike<T> {
         items.clear();
         count = buf.readVarInt();
         for(int i = 0; i < count; i++) {
-            T t = registry.getValue(ResourceLocation.parse(buf.readUtf()));
+            T t = registry.get(ResourceLocation.parse(buf.readUtf()));
             items.add(t);
         }
     }
