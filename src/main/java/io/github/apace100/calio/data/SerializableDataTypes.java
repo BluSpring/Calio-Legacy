@@ -28,6 +28,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
@@ -444,9 +445,9 @@ public final class SerializableDataTypes {
     public static final SerializableDataType<List<ItemStack>> ITEM_STACKS = SerializableDataType.list(ITEM_STACK);
 
     public static final SerializableDataType<Component> TEXT = new SerializableDataType<>(Component.class,
-        (buffer, text) -> buffer.writeUtf(Component.Serializer.toJson(text, buffer.registryAccess())),
-        (buffer) -> Component.Serializer.fromJson(buffer.readUtf(32767), buffer.registryAccess()),
-        (text) -> Component.Serializer.fromJson(text, RegistryAccess.EMPTY));
+        ComponentSerialization.STREAM_CODEC::encode,
+        ComponentSerialization.STREAM_CODEC::decode,
+        (text, provider) -> ComponentSerialization.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), text).getOrThrow().getFirst());
 
     public static final SerializableDataType<List<Component>> TEXTS = SerializableDataType.list(TEXT);
 
