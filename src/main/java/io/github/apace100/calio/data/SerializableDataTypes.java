@@ -10,7 +10,7 @@ import io.github.apace100.calio.ClassUtil;
 import io.github.apace100.calio.SerializationHelper;
 import io.github.apace100.calio.util.*;
 import io.github.apace100.calio.util.extensions.LegacyParticleOptionFactory;
-import net.minecraft.ResourceLocationException;
+import net.minecraft.IdentifierException;
 import net.minecraft.commands.arguments.NbtPathArgument;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.Direction;
@@ -30,7 +30,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stat;
@@ -186,29 +186,29 @@ public final class SerializableDataTypes {
             }
         }));
 
-    public static final SerializableDataType<ResourceLocation> IDENTIFIER = new SerializableDataType<>(
-        ResourceLocation.class,
-        FriendlyByteBuf::writeResourceLocation,
-        FriendlyByteBuf::readResourceLocation,
+    public static final SerializableDataType<Identifier> IDENTIFIER = new SerializableDataType<>(
+        Identifier.class,
+        FriendlyByteBuf::writeIdentifier,
+        FriendlyByteBuf::readIdentifier,
         (json) -> {
             String idString = json.getAsString();
             if(idString.contains(":")) {
                 String[] idSplit = idString.split(":");
                 if(idSplit.length != 2) {
-                    throw new ResourceLocationException("Incorrect number of `:` in identifier: \"" + idString + "\".");
+                    throw new IdentifierException("Incorrect number of `:` in identifier: \"" + idString + "\".");
                 }
                 if(idSplit[0].contains("*")) {
                     if(SerializableData.CURRENT_NAMESPACE != null) {
                         idSplit[0] = idSplit[0].replace("*", SerializableData.CURRENT_NAMESPACE);
                     } else {
-                        throw new ResourceLocationException("Identifier may not contain a `*` in the namespace when read here.");
+                        throw new IdentifierException("Identifier may not contain a `*` in the namespace when read here.");
                     }
                 }
                 if(idSplit[1].contains("*")) {
                     if(SerializableData.CURRENT_PATH != null) {
                         idSplit[1] = idSplit[1].replace("*", SerializableData.CURRENT_PATH);
                     } else {
-                        throw new ResourceLocationException("Identifier may only contain a `*` in the path inside of powers.");
+                        throw new IdentifierException("Identifier may only contain a `*` in the path inside of powers.");
                     }
                 }
                 idString = idSplit[0] + ":" + idSplit[1];
@@ -217,14 +217,14 @@ public final class SerializableDataTypes {
                     if(SerializableData.CURRENT_PATH != null) {
                         idString = idString.replace("*", SerializableData.CURRENT_PATH);
                     } else {
-                        throw new ResourceLocationException("Identifier may only contain a `*` in the path inside of powers.");
+                        throw new IdentifierException("Identifier may only contain a `*` in the path inside of powers.");
                     }
                 }
             }
             return convertNameToLocation(idString);
         });
 
-    public static final SerializableDataType<List<ResourceLocation>> IDENTIFIERS = SerializableDataType.list(IDENTIFIER);
+    public static final SerializableDataType<List<Identifier>> IDENTIFIERS = SerializableDataType.list(IDENTIFIER);
 
     public static final SerializableDataType<ResourceKey<Enchantment>> ENCHANTMENT = SerializableDataType.registryKey(Registries.ENCHANTMENT);
 
@@ -243,7 +243,7 @@ public final class SerializableDataTypes {
 
         if (ATTRIBUTE_PREFIXES.stream().anyMatch(e -> id.getPath().startsWith(e))) {
             var prefix = ATTRIBUTE_PREFIXES.stream().filter(e -> id.getPath().startsWith(e)).findFirst().orElseThrow();
-            return BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath().substring(prefix.length()))).orElseThrow();
+            return BuiltInRegistries.ATTRIBUTE.get(Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath().substring(prefix.length()))).orElseThrow();
         }
 
         return null;
@@ -459,8 +459,8 @@ public final class SerializableDataTypes {
                 throw new RuntimeException("Expected recipe to be a JSON object.");
             }
             JsonObject json = UpgradeUtils.upgradeRecipe(jsonElement.getAsJsonObject());
-            ResourceLocation recipeSerializerId = ResourceLocation.tryParse(GsonHelper.getAsString(json, "type"));
-            ResourceLocation recipeId = ResourceLocation.tryParse(GsonHelper.getAsString(json, "id"));
+            Identifier recipeSerializerId = Identifier.tryParse(GsonHelper.getAsString(json, "type"));
+            Identifier recipeId = Identifier.tryParse(GsonHelper.getAsString(json, "id"));
             RecipeSerializer<?> serializer = BuiltInRegistries.RECIPE_SERIALIZER.getValue(recipeSerializerId);
             return serializer.codec().codec().decode(provider.createSerializationContext(JsonOps.INSTANCE), json).getOrThrow().getFirst();
         });
@@ -613,7 +613,7 @@ public final class SerializableDataTypes {
         data -> {
             StatType statType = data.get("type");
             Registry<?> statRegistry = statType.getRegistry();
-            ResourceLocation statId = data.get("id");
+            Identifier statId = data.get("id");
             if(statRegistry.containsKey(statId)) {
                 Object statObject = statRegistry.get(statId);
                 return statType.get(statObject);
@@ -624,7 +624,7 @@ public final class SerializableDataTypes {
             SerializableData.Instance inst = data.new Instance();
             inst.set("type", stat.getType());
             Registry reg = stat.getType().getRegistry();
-            ResourceLocation statId = reg.getKey(stat.getValue());
+            Identifier statId = reg.getKey(stat.getValue());
             inst.set("id", statId);
             return inst;
         });
@@ -643,10 +643,10 @@ public final class SerializableDataTypes {
         (element, provider) -> DataComponentPatch.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), element).getOrThrow().getFirst()
     );
 
-    public static ResourceLocation convertNameToLocation(String name) {
+    public static Identifier convertNameToLocation(String name) {
         if (!name.contains(" "))
-            return ResourceLocation.parse(name.toLowerCase());
+            return Identifier.parse(name.toLowerCase());
 
-        return ResourceLocation.fromNamespaceAndPath("calio", name.toLowerCase().replace(" ", "_"));
+        return Identifier.fromNamespaceAndPath("calio", name.toLowerCase().replace(" ", "_"));
     }
 }

@@ -16,7 +16,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.GsonHelper;
 import org.apache.commons.lang3.function.TriFunction;
@@ -178,12 +178,12 @@ public class SerializableDataType<T> {
                 return optional.get();
             } else {
                 throw new RuntimeException(
-                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().location() + "\".");
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().identifier() + "\".");
             }
         });
     }
 
-    public static <T> SerializableDataType<T> registryWithRemap(Class<T> dataClass, Registry<T> registry, Function<ResourceLocation, T> remap) {
+    public static <T> SerializableDataType<T> registryWithRemap(Class<T> dataClass, Registry<T> registry, Function<Identifier, T> remap) {
         return wrap(dataClass, SerializableDataTypes.IDENTIFIER, registry::getKey, id -> {
             var remapped = remap.apply(id);
 
@@ -195,14 +195,14 @@ public class SerializableDataType<T> {
                 return optional.get();
             } else {
                 throw new RuntimeException(
-                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().location() + "\".");
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().identifier() + "\".");
             }
         });
     }
 
-    public static <T> SerializableDataType<Holder<T>> registryHolderWithRemap(Registry<T> registry, Function<ResourceLocation, Holder<T>> remap) {
+    public static <T> SerializableDataType<Holder<T>> registryHolderWithRemap(Registry<T> registry, Function<Identifier, Holder<T>> remap) {
         return wrap(ClassUtil.castClass(Holder.class), SerializableDataTypes.IDENTIFIER,
-            e -> e.unwrapKey().orElseThrow().location(), id -> {
+            e -> e.unwrapKey().orElseThrow().identifier(), id -> {
             var remapped = remap.apply(id);
 
             if (remapped != null)
@@ -213,7 +213,7 @@ public class SerializableDataType<T> {
                 return optional.get();
             } else {
                 throw new RuntimeException(
-                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().location() + "\".");
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().identifier() + "\".");
             }
         });
     }
@@ -321,7 +321,7 @@ public class SerializableDataType<T> {
 
     public static <T> SerializableDataType<Holder<T>> holder(Registry<T> registry) {
         return SerializableDataType.wrap(ClassUtil.castClass(Holder.class), SerializableDataTypes.IDENTIFIER,
-            e -> e.unwrapKey().orElseThrow().location(),
+            e -> e.unwrapKey().orElseThrow().identifier(),
             id -> registry.get(id).orElseThrow());
     }
 
@@ -329,7 +329,7 @@ public class SerializableDataType<T> {
         return SerializableDataType.wrap(
             ClassUtil.castClass(ResourceKey.class),
             SerializableDataTypes.IDENTIFIER,
-            ResourceKey::location, identifier -> ResourceKey.create(registryKeyRegistry, identifier)
+            ResourceKey::identifier, identifier -> ResourceKey.create(registryKeyRegistry, identifier)
         );
     }
 
@@ -398,10 +398,10 @@ public class SerializableDataType<T> {
                     jsonArray.forEach(je -> {
                         String s = je.getAsString();
                         if (s.startsWith("#")) {
-                            ResourceLocation id = ResourceLocation.parse(s.substring(1));
+                            Identifier id = Identifier.parse(s.substring(1));
                             tagLike.addTag(id);
                         } else {
-                            tagLike.add(ResourceLocation.parse(s));
+                            tagLike.add(Identifier.parse(s));
                         }
                     });
                     return tagLike;
