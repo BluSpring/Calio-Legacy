@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 import java.util.function.Function;
 
-@Mixin(targets = "net.minecraft.core.particles.ParticleTypes$0")
+@Mixin(targets = "net.minecraft.core.particles.ParticleTypes$1")
 public abstract class ParticleTypesAnonymousMixin implements LegacyParticleOptionFactory {
     @Unique private Function<String, ParticleOptions> calio$particleOptionFactory = null;
 
