@@ -1,3 +1,6 @@
+import java.net.HttpURLConnection
+import java.net.URI
+
 plugins {
 	id("fabric-loom") version "1.10-SNAPSHOT"
 	`maven-publish`
@@ -97,5 +100,23 @@ publishing {
 		// Notice: This block does NOT have the same function as the block in the top level.
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
+	}
+}
+
+tasks.named("publishMavenJavaPublicationToDevOSRepository") {
+	onlyIf {
+		val group = project.property("maven_group") as String
+		val artifactId = project.property("archives_base_name") as String
+		val version = project.version.toString()
+
+		try {
+			val connection = URI.create("https://mvn.devos.one/releases/${group.replace(".", "/")}/${artifactId}/${version}/${artifactId}-${version}.jar").toURL().openConnection() as HttpURLConnection
+			connection.requestMethod = "GET"
+			connection.connect()
+
+			connection.responseCode != 200
+		} catch (_: Exception) {
+			false
+		}
 	}
 }
