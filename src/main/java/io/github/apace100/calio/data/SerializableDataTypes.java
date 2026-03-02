@@ -16,7 +16,6 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleOptions;
@@ -29,8 +28,8 @@ import net.minecraft.nbt.TagParser;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.stats.Stat;
@@ -353,13 +352,13 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<ResourceKey<DamageType>> DAMAGE_TYPE = SerializableDataType.registryKey(Registries.DAMAGE_TYPE);
 
-    public static final SerializableDataType<TagKey<EntityType<?>>> ENTITY_GROUP =
-        SerializableDataType.mapped((Class<TagKey<EntityType<?>>>) (Object) TagKey.class, HashBiMap.create(ImmutableMap.of(
-            "default", CalioTags.DEFAULT_ENTITY_TYPE,
-            "undead", EntityTypeTags.UNDEAD,
-            "arthropod", EntityTypeTags.ARTHROPOD,
-            "illager", EntityTypeTags.ILLAGER,
-            "aquatic", EntityTypeTags.AQUATIC
+    public static final SerializableDataType<List<TagKey<EntityType<?>>>> ENTITY_GROUP =
+        SerializableDataType.mapped((Class<List<TagKey<EntityType<?>>>>) (Object) List.class, HashBiMap.create(ImmutableMap.of(
+            "default", List.of(CalioTags.DEFAULT_ENTITY_TYPE),
+            "undead", List.of(EntityTypeTags.UNDEAD, EntityTypeTags.SENSITIVE_TO_SMITE),
+            "arthropod", List.of(EntityTypeTags.ARTHROPOD, EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS),
+            "illager", List.of(EntityTypeTags.ILLAGER),
+            "aquatic", List.of(EntityTypeTags.AQUATIC, EntityTypeTags.SENSITIVE_TO_IMPALING)
         )));
 
     public static final SerializableDataType<EquipmentSlot> EQUIPMENT_SLOT = SerializableDataType.enumValue(EquipmentSlot.class);
