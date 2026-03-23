@@ -22,7 +22,7 @@ public class UpgradeUtils {
         return upgradeStack(new Dynamic<>(NbtOps.INSTANCE, tag)).getValue();
     }
 
-    private static <T> Dynamic<T> upgradeStack(Dynamic<T> dynamic) {
+    public static <T> Dynamic<T> upgradeStack(Dynamic<T> dynamic) {
         var fixer = DataFixers.getDataFixer();
 
         // Map "item" -> "id"
