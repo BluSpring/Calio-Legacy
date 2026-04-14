@@ -2,7 +2,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 
 plugins {
-	id("fabric-loom") version "1.14-SNAPSHOT"
+	id("net.fabricmc.fabric-loom") version "1.16-SNAPSHOT"
 	`maven-publish`
 }
 
@@ -24,14 +24,11 @@ repositories {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
-	mappings(loom.layered {
-		officialMojangMappings()
-		parchment("org.parchmentmc.data:parchment-${project.property("parchment_version")}:${project.property("parchment_snapshot")}@zip")
-	})
-	modImplementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
+
+	implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
+	implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
 
 	// PSA: Some older mods, compiled on Loom 0.2.1, might have outdated Maven POMs.
 	// You may need to force-disable transitiveness on them.
@@ -49,10 +46,10 @@ tasks.withType<JavaCompile>().configureEach {
 	options.encoding = "UTF-8"
 
 	// Minecraft 1.17 (21w19a) upwards uses Java 16.
-	options.release = 17
+	options.release = 25
 }
 
-val targetJavaVersion = "17"
+val targetJavaVersion = "25"
 
 java {
 	val javaVersion = JavaVersion.toVersion(targetJavaVersion)

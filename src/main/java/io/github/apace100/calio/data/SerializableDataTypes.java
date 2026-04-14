@@ -16,6 +16,7 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleOptions;
@@ -50,6 +51,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
@@ -441,6 +443,22 @@ public final class SerializableDataTypes {
         }
     );
 
+    public static final SerializableDataType<ItemStackTemplate> ITEM_STACK_TEMPLATE = new SerializableDataType<>(ItemStackTemplate.class,
+        ItemStackTemplate.STREAM_CODEC::encode,
+        ItemStackTemplate.STREAM_CODEC::decode,
+        (data, provider) ->  {
+            if (data.isJsonObject()) {
+                var json = data.getAsJsonObject();
+                if (json.has("item") || json.has("tag")) {
+                    // Convert legacy item stack to modern item stack
+                    data = UpgradeUtils.upgradeStack(json);
+                }
+            }
+
+            return ItemStackTemplate.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), data).getOrThrow().getFirst();
+        }
+    );
+
     public static final SerializableDataType<List<ItemStack>> ITEM_STACKS = SerializableDataType.list(ITEM_STACK);
 
     public static final SerializableDataType<Component> TEXT = new SerializableDataType<>(Component.class,
@@ -511,7 +529,7 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<StatusEffectChance>> STATUS_EFFECT_CHANCES = SerializableDataType.list(STATUS_EFFECT_CHANCE);
 
-    public static final SerializableDataType<DataComponentPatch> FOOD_COMPONENT = SerializableDataType.compound(DataComponentPatch.class, new SerializableData()
+    public static final SerializableDataType<DataComponentMap> FOOD_COMPONENT = SerializableDataType.compound(DataComponentMap.class, new SerializableData()
             .add("hunger", INT)
             .add("saturation", FLOAT)
             .add("meat", BOOLEAN, false)
@@ -521,7 +539,7 @@ public final class SerializableDataTypes {
             .add("effect", STATUS_EFFECT_CHANCE, null)
             .add("effects", STATUS_EFFECT_CHANCES, null),
         (data) -> {
-            var patch = DataComponentPatch.builder();
+            var patch = DataComponentMap.builder();
             var consumeSeconds = Consumable.DEFAULT_CONSUME_SECONDS;
             var effects = new ArrayList<ConsumeEffect>();
 
@@ -550,8 +568,8 @@ public final class SerializableDataTypes {
             return patch.build();
         },
         (data, patch) -> {
-            var fc = patch.get(DataComponents.FOOD).get();
-            var consumable = patch.get(DataComponents.CONSUMABLE).get();
+            var fc = patch.get(DataComponents.FOOD);
+            var consumable = patch.get(DataComponents.CONSUMABLE);
             SerializableData.Instance inst = data.new Instance();
             inst.set("hunger", fc.nutrition());
             inst.set("saturation", fc.saturation());
