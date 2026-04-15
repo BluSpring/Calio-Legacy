@@ -50,7 +50,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.Consumable;
@@ -427,9 +426,9 @@ public final class SerializableDataTypes {
         }
     );
 
-    public static final SerializableDataType<ItemStack> ITEM_STACK = new SerializableDataType<>(ItemStack.class,
-        ItemStack.OPTIONAL_STREAM_CODEC::encode,
-        ItemStack.OPTIONAL_STREAM_CODEC::decode,
+    public static final SerializableDataType<LazyItemStack> ITEM_STACK = new SerializableDataType<>(LazyItemStack.class,
+        LazyItemStack.STREAM_CODEC::encode,
+        LazyItemStack.STREAM_CODEC::decode,
         (data, provider) ->  {
             if (data.isJsonObject()) {
                 var json = data.getAsJsonObject();
@@ -439,9 +438,11 @@ public final class SerializableDataTypes {
                 }
             }
 
-            return ItemStack.OPTIONAL_CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), data).getOrThrow().getFirst();
+            return LazyItemStack.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), data).getOrThrow().getFirst();
         }
     );
+
+    public static final SerializableDataType<List<LazyItemStack>> ITEM_STACKS = SerializableDataType.list(ITEM_STACK);
 
     public static final SerializableDataType<ItemStackTemplate> ITEM_STACK_TEMPLATE = new SerializableDataType<>(ItemStackTemplate.class,
         ItemStackTemplate.STREAM_CODEC::encode,
@@ -458,8 +459,6 @@ public final class SerializableDataTypes {
             return ItemStackTemplate.CODEC.decode(provider.createSerializationContext(JsonOps.INSTANCE), data).getOrThrow().getFirst();
         }
     );
-
-    public static final SerializableDataType<List<ItemStack>> ITEM_STACKS = SerializableDataType.list(ITEM_STACK);
 
     public static final SerializableDataType<Component> TEXT = new SerializableDataType<>(Component.class,
         ComponentSerialization.STREAM_CODEC::encode,
