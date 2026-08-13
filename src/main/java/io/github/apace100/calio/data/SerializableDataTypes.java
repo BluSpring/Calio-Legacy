@@ -481,9 +481,9 @@ public final class SerializableDataTypes {
             return serializer.codec().codec().decode(provider.createSerializationContext(JsonOps.INSTANCE), json).getOrThrow().getFirst();
         });
 
-    public static final SerializableDataType<GameEvent> GAME_EVENT = SerializableDataType.registry(GameEvent.class, BuiltInRegistries.GAME_EVENT);
+    public static final SerializableDataType<Holder<GameEvent>> GAME_EVENT = SerializableDataType.registryHolder(BuiltInRegistries.GAME_EVENT);
 
-    public static final SerializableDataType<List<GameEvent>> GAME_EVENTS =
+    public static final SerializableDataType<List<Holder<GameEvent>>> GAME_EVENTS =
         SerializableDataType.list(GAME_EVENT);
 
     public static final SerializableDataType<TagKey<GameEvent>> GAME_EVENT_TAG = SerializableDataType.tag(Registries.GAME_EVENT);
