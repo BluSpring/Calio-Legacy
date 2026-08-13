@@ -15,8 +15,8 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.GsonHelper;
 import org.apache.commons.lang3.function.TriFunction;
@@ -174,6 +174,18 @@ public class SerializableDataType<T> {
     public static <T> SerializableDataType<T> registry(Class<T> dataClass, Registry<T> registry) {
         return wrap(dataClass, SerializableDataTypes.IDENTIFIER, registry::getKey, id -> {
             Optional<T> optional = registry.getOptional(id);
+            if(optional.isPresent()) {
+                return optional.get();
+            } else {
+                throw new RuntimeException(
+                    "Identifier \"" + id + "\" was not registered in registry \"" + registry.key().identifier() + "\".");
+            }
+        });
+    }
+
+    public static <T> SerializableDataType<Holder<T>> registryHolder(Registry<T> registry) {
+        return wrap(ClassUtil.castClass(Holder.class), SerializableDataTypes.IDENTIFIER, e -> e.unwrapKey().orElseThrow().identifier(), id -> {
+            Optional<Holder.Reference<T>> optional = registry.get(id);
             if(optional.isPresent()) {
                 return optional.get();
             } else {
